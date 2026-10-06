@@ -20,7 +20,7 @@
           <span id="clock"></span>
         </div>
         <div class="status-right">
-          <span>Guest Mode</span>
+          <span>Offline Mode</span>
         </div>
       </header>
 
@@ -36,8 +36,14 @@
 
       <div id="startMenu" class="start-menu glass hidden">
         <div class="start-header">Applications</div>
+        <div class="start-search-wrap">
+          <input id="startSearch" type="text" placeholder="Search apps..." />
+        </div>
         <div id="startList" class="start-list"></div>
       </div>
+
+      <div id="desktopContextMenu" class="context-menu hidden"></div>
+      <div id="notificationCenter" class="notification-center"></div>
     </div>
 
     <script src="app.js"></script>

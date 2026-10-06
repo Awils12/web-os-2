@@ -1,8 +1,10 @@
 const STORAGE_KEYS = {
   files: 'webos_v3_files',
   notes: 'webos_v3_notes',
-  chat: 'webos_v3_chat',
   installedApps: 'webos_v3_installed',
+  theme: 'webos_v3_theme',
+  accent: 'webos_v3_accent',
+  wallpaper: 'webos_v3_wallpaper'
 };
 
 const APP_CATALOG = [
@@ -10,24 +12,23 @@ const APP_CATALOG = [
   { id: 'files', name: 'Files', icon: '📁', category: 'System', installed: true },
   { id: 'writer', name: 'Writer', icon: '✍️', category: 'Notes', installed: true },
   { id: 'code', name: 'Code', icon: '💻', category: 'Dev', installed: true },
-  { id: 'chat', name: 'Chat', icon: '💬', category: 'Social', installed: true },
   { id: 'games', name: 'Games', icon: '🎮', category: 'Play', installed: true },
   { id: 'store', name: 'App Store', icon: '🛍️', category: 'Apps', installed: true },
-  { id: 'terminal', name: 'Terminal', icon: '⌨️', category: 'System', installed: true },
+  { id: 'settings', name: 'Settings', icon: '⚙️', category: 'System', installed: true },
+  { id: 'terminal', name: 'Terminal', icon: '⌨️', category: 'System', installed: true }
 ];
 
 const state = {
   files: loadJSON(STORAGE_KEYS.files, [
     { id: 'welcome', name: 'welcome.txt', content: 'Welcome home.\n\nThis is your personal web desktop.\nEverything is yours to shape.' },
-    { id: 'ideas', name: 'brainstorm.txt', content: 'Ideas:\n- launch app store\n- build a browser\n- write code\n- create snippets' },
-    { id: 'notes', name: 'notes.md', content: '# Home screen\n\nA place to think, create, and roam.' },
+    { id: 'ideas', name: 'brainstorm.txt', content: 'Ideas:\n- launch app store\n- build a browser\n- write code\n- make good things' },
+    { id: 'notes', name: 'notes.md', content: '# Home screen\n\nA place to think, create, and roam.' }
   ]),
   notes: loadJSON(STORAGE_KEYS.notes, 'Dream big. Build thoughtfully. Make something that feels like home inside a screen.'),
-  chat: loadJSON(STORAGE_KEYS.chat, [
-    { author: 'System', text: 'Welcome back. Your desktop is ready.' },
-    { author: 'Guest', text: 'This feels like a real home screen.' },
-  ]),
   installedApps: loadJSON(STORAGE_KEYS.installedApps, APP_CATALOG.map((app) => app.id)),
+  theme: loadJSON(STORAGE_KEYS.theme, 'dark'),
+  accent: loadJSON(STORAGE_KEYS.accent, '#68d5ff'),
+  wallpaper: loadJSON(STORAGE_KEYS.wallpaper, '')
 };
 
 const windows = {};
@@ -44,6 +45,41 @@ function loadJSON(key, fallback) {
 
 function saveJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function applyTheme() {
+  document.body.classList.remove('light-mode', 'neon-mode');
+  if (state.theme === 'light') document.body.classList.add('light-mode');
+  if (state.theme === 'neon') document.body.classList.add('neon-mode');
+
+  document.documentElement.style.setProperty('--accent', state.accent);
+
+  const desktop = document.getElementById('desktop');
+  if (desktop) {
+    if (state.wallpaper) {
+      desktop.style.backgroundImage = `linear-gradient(135deg, rgba(7,19,33,0.55), rgba(12,26,45,0.5)), url(${state.wallpaper})`;
+      desktop.style.backgroundSize = 'cover';
+      desktop.style.backgroundPosition = 'center';
+    } else {
+      desktop.style.backgroundImage = 'none';
+      desktop.style.background = 'var(--desktop-bg)';
+    }
+  }
+}
+
+function showNotification(message, kind = 'info') {
+  const tray = document.getElementById('notificationCenter');
+  if (!tray) return;
+
+  const note = document.createElement('div');
+  note.className = 'notification';
+  note.textContent = message;
+  note.style.borderColor = kind === 'success' ? 'rgba(67, 211, 158, 0.6)' : 'rgba(255,255,255,0.12)';
+  tray.appendChild(note);
+
+  setTimeout(() => {
+    note.remove();
+  }, 2600);
 }
 
 function updateClock() {
@@ -90,26 +126,35 @@ function renderDock() {
 function renderStartMenu() {
   const startList = document.getElementById('startList');
   const activeApps = APP_CATALOG.filter((app) => state.installedApps.includes(app.id));
+  const searchInput = document.getElementById('startSearch');
 
-  startList.innerHTML = activeApps.map((app) => `
-    <button class="start-item" data-menu-app="${app.id}">
-      <span class="emoji">${app.icon}</span>
-      <span>${app.name}</span>
-    </button>
-  `).join('');
+  const renderApps = (filter = '') => {
+    const filtered = activeApps.filter((app) => app.name.toLowerCase().includes(filter.toLowerCase()));
+    startList.innerHTML = filtered.map((app) => `
+      <button class="start-item" data-menu-app="${app.id}">
+        <span class="emoji">${app.icon}</span>
+        <span>${app.name}</span>
+      </button>
+    `).join('');
 
-  startList.querySelectorAll('.start-item').forEach((button) => {
-    button.addEventListener('click', () => {
-      openApp(button.dataset.menuApp);
-      document.getElementById('startMenu').classList.add('hidden');
+    startList.querySelectorAll('.start-item').forEach((button) => {
+      button.addEventListener('click', () => {
+        openApp(button.dataset.menuApp);
+        document.getElementById('startMenu').classList.add('hidden');
+      });
     });
-  });
+  };
+
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.oninput = (event) => renderApps(event.target.value);
+  }
+
+  renderApps();
 }
 
 function openApp(appId) {
-  if (!state.installedApps.includes(appId)) {
-    return;
-  }
+  if (!state.installedApps.includes(appId)) return;
 
   if (windows[appId]) {
     focusWindow(appId);
@@ -121,9 +166,9 @@ function openApp(appId) {
     case 'files': createFilesWindow(); break;
     case 'writer': createWriterWindow(); break;
     case 'code': createCodeWindow(); break;
-    case 'chat': createChatWindow(); break;
     case 'games': createGamesWindow(); break;
     case 'store': createStoreWindow(); break;
+    case 'settings': createSettingsWindow(); break;
     case 'terminal': createTerminalWindow(); break;
     default: break;
   }
@@ -136,22 +181,39 @@ function createWindow(id, title, html, options = {}) {
   const win = document.createElement('div');
   win.className = 'window active';
   win.id = `window-${id}`;
+  win.dataset.id = id;
   win.style.left = options.left || '180px';
   win.style.top = options.top || '120px';
   win.style.width = options.width || '720px';
   win.style.height = options.height || '520px';
   win.style.zIndex = String(++zIndex);
 
-  win.innerHTML = `
-    <div class="window-header" data-handle="${id}">
-      <div class="window-title">${title}</div>
-      <div class="window-controls">
-        <button class="window-btn" data-action="minimize" data-target="${id}">—</button>
-        <button class="window-btn" data-action="close" data-target="${id}">×</button>
-      </div>
+  const body = document.createElement('div');
+  body.className = 'window-body';
+  body.innerHTML = html;
+
+  const header = document.createElement('div');
+  header.className = 'window-header';
+  header.dataset.handle = id;
+  header.innerHTML = `
+    <div class="window-title">${title}</div>
+    <div class="window-controls">
+      <button class="window-btn" data-action="minimize" data-target="${id}">—</button>
+      <button class="window-btn" data-action="maximize" data-target="${id}">▢</button>
+      <button class="window-btn" data-action="close" data-target="${id}">×</button>
     </div>
-    <div class="window-body">${html}</div>
   `;
+
+  win.appendChild(header);
+  win.appendChild(body);
+
+  const resizeHandles = ['north', 'south', 'east', 'west', 'ne', 'nw', 'se', 'sw'];
+  resizeHandles.forEach((dir) => {
+    const handle = document.createElement('div');
+    handle.className = `resize-handle ${dir === 'ne' || dir === 'nw' || dir === 'se' || dir === 'sw' ? 'corner' : ''} ${dir}`;
+    handle.dataset.resize = dir;
+    win.appendChild(handle);
+  });
 
   layer.appendChild(win);
   windows[id] = win;
@@ -164,10 +226,12 @@ function createWindow(id, title, html, options = {}) {
       const target = button.dataset.target;
       if (action === 'close') closeWindow(target);
       if (action === 'minimize') minimizeWindow(target);
+      if (action === 'maximize') toggleMaximize(target);
     });
   });
 
   makeDraggable(win);
+  makeResizable(win);
   focusWindow(id);
   return win;
 }
@@ -193,6 +257,35 @@ function minimizeWindow(id) {
   target.style.display = target.style.display === 'none' ? 'flex' : 'none';
 }
 
+function toggleMaximize(id) {
+  const target = windows[id];
+  if (!target) return;
+
+  const area = document.querySelector('.desktop-area');
+  const rect = area.getBoundingClientRect();
+
+  if (target.dataset.maximized === 'true') {
+    const prev = JSON.parse(target.dataset.prev || '{}');
+    target.style.left = prev.left || '180px';
+    target.style.top = prev.top || '120px';
+    target.style.width = prev.width || '720px';
+    target.style.height = prev.height || '520px';
+    target.dataset.maximized = 'false';
+  } else {
+    target.dataset.prev = JSON.stringify({
+      left: target.style.left,
+      top: target.style.top,
+      width: target.style.width,
+      height: target.style.height
+    });
+    target.style.left = '0px';
+    target.style.top = '0px';
+    target.style.width = `${rect.width}px`;
+    target.style.height = `${rect.height}px`;
+    target.dataset.maximized = 'true';
+  }
+}
+
 function makeDraggable(win) {
   const handle = win.querySelector('[data-handle]');
   if (!handle) return;
@@ -202,6 +295,7 @@ function makeDraggable(win) {
   let offsetY = 0;
 
   handle.addEventListener('mousedown', (event) => {
+    if (win.dataset.maximized === 'true') return;
     dragging = true;
     const rect = win.getBoundingClientRect();
     offsetX = event.clientX - rect.left;
@@ -216,6 +310,46 @@ function makeDraggable(win) {
   });
 
   window.addEventListener('mouseup', () => { dragging = false; });
+}
+
+function makeResizable(win) {
+  const handles = win.querySelectorAll('.resize-handle');
+  if (!handles.length) return;
+
+  handles.forEach((handle) => {
+    handle.addEventListener('mousedown', (event) => {
+      event.stopPropagation();
+      const dir = handle.dataset.resize;
+      const startX = event.clientX;
+      const startY = event.clientY;
+      const rect = win.getBoundingClientRect();
+      const onMove = (moveEvent) => {
+        const dx = moveEvent.clientX - startX;
+        const dy = moveEvent.clientY - startY;
+
+        if (dir.includes('e')) win.style.width = `${rect.width + dx}px`;
+        if (dir.includes('s')) win.style.height = `${rect.height + dy}px`;
+        if (dir.includes('w')) {
+          const newWidth = rect.width - dx;
+          win.style.width = `${Math.max(260, newWidth)}px`;
+          win.style.left = `${rect.left + dx}px`;
+        }
+        if (dir.includes('n')) {
+          const newHeight = rect.height - dy;
+          win.style.height = `${Math.max(180, newHeight)}px`;
+          win.style.top = `${rect.top + dy}px`;
+        }
+      };
+
+      const onUp = () => {
+        window.removeEventListener('mousemove', onMove);
+        window.removeEventListener('mouseup', onUp);
+      };
+
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+    });
+  });
 }
 
 function normalizeUrl(raw) {
@@ -250,11 +384,11 @@ function createBrowserWindow() {
 
 function createFilesWindow() {
   const files = state.files;
+  const activeFile = files[0];
   const fileList = files.map((file) => `
-    <button class="file-item ${file.id === files[0].id ? 'active' : ''}" data-file-id="${file.id}">${file.name}</button>
+    <button class="file-item ${file.id === activeFile.id ? 'active' : ''}" data-file-id="${file.id}">${file.name}</button>
   `).join('');
 
-  const firstFile = files[0];
   const html = `
     <div class="file-layout">
       <aside class="file-sidebar">
@@ -264,7 +398,7 @@ function createFilesWindow() {
         </div>
       </aside>
       <section class="file-editor">
-        <textarea id="fileEditorArea">${escapeHtml(firstFile.content)}</textarea>
+        <textarea id="fileEditorArea">${escapeHtml(activeFile.content)}</textarea>
         <div class="editor-actions">
           <button id="saveFileBtn">Save</button>
           <button id="deleteFileBtn">Delete</button>
@@ -275,7 +409,7 @@ function createFilesWindow() {
 
   const win = createWindow('files', 'Files', html, { left: '220px', top: '120px', width: '760px', height: '540px' });
   const editor = win.querySelector('#fileEditorArea');
-  let selectedId = firstFile.id;
+  let selectedId = activeFile.id;
 
   win.querySelectorAll('.file-item').forEach((item) => {
     item.addEventListener('click', () => {
@@ -293,6 +427,7 @@ function createFilesWindow() {
     if (!target) return;
     target.content = editor.value;
     saveJSON(STORAGE_KEYS.files, state.files);
+    showNotification('File saved');
   });
 
   win.querySelector('#deleteFileBtn').addEventListener('click', () => {
@@ -302,6 +437,7 @@ function createFilesWindow() {
     saveJSON(STORAGE_KEYS.files, state.files);
     closeWindow('files');
     createFilesWindow();
+    showNotification('File deleted');
   });
 
   win.querySelector('#newFileBtn').addEventListener('click', () => {
@@ -311,6 +447,7 @@ function createFilesWindow() {
     saveJSON(STORAGE_KEYS.files, state.files);
     closeWindow('files');
     createFilesWindow();
+    showNotification('New file created');
   });
 }
 
@@ -331,6 +468,7 @@ function createWriterWindow() {
   win.querySelector('#saveNotesBtn').addEventListener('click', () => {
     state.notes = textarea.value;
     saveJSON(STORAGE_KEYS.notes, state.notes);
+    showNotification('Notebook saved');
   });
 }
 
@@ -370,47 +508,7 @@ hello();</textarea>
     state.files.push(snippet);
     saveJSON(STORAGE_KEYS.files, state.files);
     output.textContent = 'Saved to Files as snippet.js';
-  });
-}
-
-function createChatWindow() {
-  const html = `
-    <div class="chat-window">
-      <div id="chatThread" class="chat-thread"></div>
-      <div class="chat-compose">
-        <input id="chatInput" placeholder="Type a message..." />
-        <button id="sendChatBtn">Send</button>
-      </div>
-    </div>
-  `;
-
-  const win = createWindow('chat', 'Chat', html, { left: '420px', top: '120px', width: '470px', height: '530px' });
-  const thread = win.querySelector('#chatThread');
-  const input = win.querySelector('#chatInput');
-
-  function renderThread() {
-    thread.innerHTML = state.chat.map((msg) => `
-      <div class="chat-bubble ${msg.author === 'Guest' ? 'self' : ''}">
-        <strong>${msg.author}:</strong> ${escapeHtml(msg.text)}
-      </div>
-    `).join('');
-    thread.scrollTop = thread.scrollHeight;
-  }
-
-  renderThread();
-
-  win.querySelector('#sendChatBtn').addEventListener('click', () => {
-    const text = input.value.trim();
-    if (!text) return;
-    state.chat.push({ author: 'Guest', text });
-    state.chat.push({ author: 'System', text: `Echo: ${text}` });
-    saveJSON(STORAGE_KEYS.chat, state.chat);
-    input.value = '';
-    renderThread();
-  });
-
-  input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') win.querySelector('#sendChatBtn').click();
+    showNotification('Code saved to Files');
   });
 }
 
@@ -538,6 +636,101 @@ function createStoreWindow() {
   });
 }
 
+function createSettingsWindow() {
+  const html = `
+    <div class="settings-window">
+      <div class="settings-grid">
+        <div class="setting-card">
+          <label>Theme</label>
+          <div class="setting-btn-row">
+            <button data-theme="dark">Dark</button>
+            <button data-theme="light">Light</button>
+            <button data-theme="neon">Neon</button>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <label>Accent</label>
+          <input id="accentInput" type="color" value="${state.accent}" />
+        </div>
+
+        <div class="setting-card">
+          <label>Wallpaper</label>
+          <input id="wallpaperInput" type="file" accept="image/*" />
+          <div class="setting-btn-row">
+            <button id="clearWallpaperBtn">Clear</button>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <label>Quick actions</label>
+          <div class="setting-btn-row">
+            <button id="showShortcutsBtn">Shortcuts</button>
+            <button id="showNotificationBtn">Notify</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const win = createWindow('settings', 'Settings', html, { left: '340px', top: '120px', width: '560px', height: '420px' });
+
+  win.querySelectorAll('[data-theme]').forEach((button) => {
+    button.addEventListener('click', () => {
+      state.theme = button.dataset.theme;
+      saveJSON(STORAGE_KEYS.theme, state.theme);
+      applyTheme();
+      showNotification(`Theme set to ${state.theme}`);
+    });
+  });
+
+  win.querySelector('#accentInput').addEventListener('input', (event) => {
+    state.accent = event.target.value;
+    saveJSON(STORAGE_KEYS.accent, state.accent);
+    applyTheme();
+  });
+
+  win.querySelector('#wallpaperInput').addEventListener('change', (event) => {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      state.wallpaper = reader.result;
+      saveJSON(STORAGE_KEYS.wallpaper, state.wallpaper);
+      applyTheme();
+      showNotification('Wallpaper updated');
+    };
+    reader.readAsDataURL(file);
+  });
+
+  win.querySelector('#clearWallpaperBtn').addEventListener('click', () => {
+    state.wallpaper = '';
+    saveJSON(STORAGE_KEYS.wallpaper, state.wallpaper);
+    applyTheme();
+    showNotification('Wallpaper cleared');
+  });
+
+  win.querySelector('#showShortcutsBtn').addEventListener('click', () => {
+    const text = [
+      'Desktop: right-click for quick actions',
+      'Windows: drag to move, use the resize handles',
+      'Dock: click apps to open/bring forward',
+      'Start: search apps instantly',
+      'Theme: change with settings panel'
+    ].join('\n');
+    showNotification('Shortcuts ready');
+    const info = document.createElement('div');
+    info.className = 'notification';
+    info.textContent = text;
+    document.getElementById('notificationCenter').appendChild(info);
+    setTimeout(() => info.remove(), 3000);
+  });
+
+  win.querySelector('#showNotificationBtn').addEventListener('click', () => {
+    showNotification('System ready');
+  });
+}
+
 function createTerminalWindow() {
   const html = `
     <div class="terminal-window">
@@ -562,6 +755,51 @@ function escapeHtml(text) {
     .replace(/'/g, '&#039;');
 }
 
+function setupContextMenu() {
+  const menu = document.getElementById('desktopContextMenu');
+  const items = [
+    { label: 'New Folder', action: () => { showNotification('Folder creation coming next'); } },
+    { label: 'Change Wallpaper', action: () => openApp('settings') },
+    { label: 'Toggle Theme', action: () => {
+        state.theme = state.theme === 'dark' ? 'light' : state.theme === 'light' ? 'neon' : 'dark';
+        saveJSON(STORAGE_KEYS.theme, state.theme);
+        applyTheme();
+        showNotification(`Theme set to ${state.theme}`);
+      }
+    },
+    { label: 'Open Settings', action: () => openApp('settings') },
+    { label: 'Shortcuts', action: () => showNotification('Drag windows, right-click desktop, search apps from Start') }
+  ];
+
+  menu.innerHTML = items.map((item) => `
+    <button class="context-item" data-action="${item.label}">${item.label}</button>
+  `).join('');
+
+  menu.querySelectorAll('.context-item').forEach((button) => {
+    button.addEventListener('click', () => {
+      const label = button.dataset.action;
+      const match = items.find((item) => item.label === label);
+      if (match) match.action();
+      menu.classList.add('hidden');
+    });
+  });
+
+  document.addEventListener('contextmenu', (event) => {
+    const target = event.target.closest('.window') || event.target.closest('.start-menu') || event.target.closest('.dock') || event.target.closest('.context-menu');
+    if (target) return;
+    event.preventDefault();
+    menu.style.left = `${event.clientX}px`;
+    menu.style.top = `${event.clientY}px`;
+    menu.classList.remove('hidden');
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.context-item') && !event.target.closest('.context-menu')) {
+      menu.classList.add('hidden');
+    }
+  });
+}
+
 function setupDesktop() {
   document.getElementById('startButton').addEventListener('click', () => {
     const menu = document.getElementById('startMenu');
@@ -578,12 +816,15 @@ function setupDesktop() {
   renderDesktopIcons();
   renderDock();
   renderStartMenu();
+  applyTheme();
   updateClock();
   setInterval(updateClock, 30000);
 
+  setupContextMenu();
+  showNotification('Desktop ready');
+
   openApp('browser');
   openApp('files');
-  openApp('chat');
   openApp('code');
   openApp('games');
   openApp('terminal');
