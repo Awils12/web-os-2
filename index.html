@@ -7,32 +7,36 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div id="desktop">
-      <div class="topbar">
-        <div class="brand">Web OS</div>
+    <div id="desktop" class="desktop-shell">
+      <div class="background-glow glow-1"></div>
+      <div class="background-glow glow-2"></div>
+
+      <header class="topbar glass">
+        <div class="status-left">
+          <div class="signal-dot"></div>
+          <span>Web OS</span>
+        </div>
         <div class="topbar-center">
-          <span id="clock">--:--</span>
+          <span id="clock"></span>
         </div>
-        <div class="user-pill">Guest session</div>
-      </div>
-
-      <div id="desktop-icons" class="desktop-icons"></div>
-
-      <div id="taskbar" class="taskbar">
-        <div class="taskbar-left">
-          <button class="start-btn" id="startBtn">Start</button>
+        <div class="status-right">
+          <span>Guest Mode</span>
         </div>
-        <div id="openApps" class="taskbar-apps"></div>
-        <div class="taskbar-right">
-          <span id="statusText">Ready</span>
-        </div>
-      </div>
+      </header>
 
-      <div id="windowLayer" class="window-layer"></div>
+      <main class="desktop-area">
+        <aside id="desktopIcons" class="desktop-icons"></aside>
+        <div id="windowLayer" class="window-layer"></div>
+      </main>
 
-      <div id="startMenu" class="start-menu hidden">
-        <div class="start-menu-header">Apps</div>
-        <div id="startMenuList"></div>
+      <nav class="dock glass">
+        <div id="dockApps" class="dock-apps"></div>
+        <button id="startButton" class="start-button">Start</button>
+      </nav>
+
+      <div id="startMenu" class="start-menu glass hidden">
+        <div class="start-header">Applications</div>
+        <div id="startList" class="start-list"></div>
       </div>
     </div>
 

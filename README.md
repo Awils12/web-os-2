@@ -1,32 +1,28 @@
-# Web OS
+# Web OS v3
 
-A guest-mode desktop-style web app with:
+This is a polished desktop-style browser app designed to feel like a home screen inside one page.
+
+Features:
+- desktop icons
+- dock/start menu
 - browser window
-- file system
+- file explorer
+- writer app
 - code editor
 - chat
-- games
-- notes
+- mini game
 - app store
-- no login or authentication needed
+- terminal
+- local storage persistence
 
-## How to use
-1. Download the ZIP file.
-2. Extract it.
-3. Open `index.html` in your browser.
-4. The desktop loads immediately.
+How to use:
+1. Download the ZIP
+2. Extract it
+3. Open `index.html` in your browser
+4. The desktop loads immediately
 
-## Features
-- Browser inside an iframe-like layout
-- Local file storage using browser storage
-- Guest-only environment
-- Desktop icons and taskbar
-- Code editor and JavaScript runner
-- Real-time local chat simulation
-- Snake game
-- App installation area
+Note:
+This version is an offline guest-mode desktop prototype.
+It is not a real multi-user online OS yet, but it feels much more like a personal digital workspace.
 
-## Notes
-This is an offline browser-based desktop prototype, designed to work without a server or login.
-
-If you want a version with online accounts and communication across devices, that would require a real backend and database.
+If you want the next version, the next step is to add a real backend, database, and live networking.
