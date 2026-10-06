@@ -1,9 +1,9 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_socketio import SocketIO, emit
 from flask_sqlalchemy import SQLAlchemy
 import os
-import json
+import platform
 from datetime import datetime
 from functools import wraps
 
@@ -42,7 +42,7 @@ class FileSystem(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     filename = db.Column(db.String(255), nullable=False)
     content = db.Column(db.Text)
-    file_type = db.Column(db.String(20))  # 'file', 'folder'
+    file_type = db.Column(db.String(20))
     parent_id = db.Column(db.Integer, db.ForeignKey('file_system.id'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -52,7 +52,7 @@ class GameSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     game_name = db.Column(db.String(100), nullable=False)
     players = db.relationship('User', secondary='game_player')
-    status = db.Column(db.String(20), default='waiting')  # waiting, playing, finished
+    status = db.Column(db.String(20), default='waiting')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class App(db.Model):
@@ -63,7 +63,6 @@ class App(db.Model):
     category = db.Column(db.String(50))
     installed_by = db.relationship('User', secondary='app_install')
 
-# Association tables
 friendship = db.Table('friendship',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('friend_id', db.Integer, db.ForeignKey('user.id'))
@@ -79,7 +78,6 @@ app_install = db.Table('app_install',
     db.Column('app_id', db.Integer, db.ForeignKey('app.id'))
 )
 
-# Authentication helper
 def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
@@ -90,12 +88,11 @@ def token_required(f):
             user_id = int(token.split()[1]) if len(token.split()) > 1 else None
             if not user_id:
                 raise ValueError
-        except:
+        except Exception:
             return jsonify({'message': 'Invalid token!'}), 401
         return f(user_id, *args, **kwargs)
     return decorated
 
-# Routes
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
@@ -175,7 +172,6 @@ def get_apps():
     apps = App.query.all()
     return jsonify([{'id': a.id, 'name': a.name, 'description': a.description, 'icon': a.icon, 'category': a.category} for a in apps])
 
-# WebSocket Events
 @socketio.on('connect')
 def handle_connect():
     print('Client connected')
@@ -189,7 +185,18 @@ def handle_disconnect():
 def handle_message(data):
     emit('response', {'data': data}, broadcast=True)
 
+def open_browser(url):
+    system = platform.system()
+    if system == 'Darwin':
+        os.system(f'open {url}')
+    elif system == 'Windows':
+        os.system(f'start {url}')
+    else:
+        os.system(f'xdg-open {url}')
+
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
+    print('🚀 Web OS starting...')
+    open_browser('http://localhost:5000')
     socketio.run(app, debug=True, host='0.0.0.0', port=5000)
