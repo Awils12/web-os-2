@@ -1,0 +1,546 @@
+:root {
+  --bg1: #0f172a;
+  --bg2: #1d4ed8;
+  --panel: rgba(15, 23, 42, 0.8);
+  --panel-2: rgba(30, 41, 59, 0.9);
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-strong: rgba(255, 255, 255, 0.12);
+  --text: #e5eefb;
+  --muted: #9fb4d9;
+  --accent: #38bdf8;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --shadow: rgba(0, 0, 0, 0.42);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, var(--bg1), var(--bg2));
+  color: var(--text);
+}
+
+button, input, textarea {
+  font: inherit;
+}
+
+button {
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+button:hover {
+  background: rgba(255,255,255,0.14);
+}
+
+#desktop {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.24), transparent 32%),
+              linear-gradient(135deg, #0f172a, #1d4ed8);
+}
+
+.topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 18px;
+  background: rgba(12, 18, 28, 0.78);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  backdrop-filter: blur(14px);
+  z-index: 30;
+}
+
+.brand {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f8fbff;
+}
+
+.topbar-center {
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.user-pill {
+  background: rgba(255,255,255,0.08);
+  border-radius: 999px;
+  padding: 7px 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  color: var(--text);
+}
+
+.desktop-icons {
+  position: absolute;
+  top: 70px;
+  left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 5;
+}
+
+.desktop-icon {
+  width: 88px;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 8px 4px;
+  transition: 0.2s ease;
+}
+
+.desktop-icon:hover {
+  background: rgba(255,255,255,0.07);
+}
+
+.desktop-icon .icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 6px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  background: linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.14);
+}
+
+.desktop-icon .label {
+  font-size: 12px;
+  color: rgba(255,255,255,0.94);
+  line-height: 1.2;
+}
+
+.taskbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  background: rgba(10, 16, 26, 0.78);
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  z-index: 35;
+  backdrop-filter: blur(12px);
+}
+
+.taskbar-left, .taskbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.start-btn {
+  background: linear-gradient(135deg, #34d399, #059669);
+  border: none;
+  color: white;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.taskbar-apps {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  min-width: 0;
+}
+
+.task-pill {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.taskbar-right {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.window-layer {
+  position: absolute;
+  inset: 44px 0 52px 0;
+  z-index: 10;
+}
+
+.window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  min-height: 200px;
+  border-radius: 14px;
+  background: rgba(10, 16, 26, 0.94);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 18px 38px var(--shadow);
+  overflow: hidden;
+}
+
+.window.active {
+  z-index: 20;
+}
+
+.window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.05);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  cursor: move;
+  user-select: none;
+}
+
+.window-title {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.window-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.window-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.06);
+}
+
+.window-body {
+  flex: 1;
+  overflow: auto;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.start-menu {
+  position: absolute;
+  left: 14px;
+  bottom: 64px;
+  width: 260px;
+  background: rgba(15, 23, 42, 0.96);
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 20px 42px var(--shadow);
+  z-index: 40;
+}
+
+.start-menu.hidden {
+  display: none;
+}
+
+.start-menu-header {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.start-menu-list {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.start-item {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 10px;
+}
+
+.start-item .emoji {
+  width: 22px;
+  text-align: center;
+}
+
+.browser-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+}
+
+.browser-toolbar input {
+  flex: 1;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(15,23,42,0.7);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.browser-frame {
+  width: 100%;
+  height: calc(100% - 56px);
+  border: 0;
+  background: white;
+}
+
+.file-area {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  height: 100%;
+}
+
+.file-sidebar {
+  border-right: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.02);
+  padding: 10px;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-item {
+  padding: 10px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: rgba(255,255,255,0.03);
+}
+
+.file-item.active {
+  border-color: rgba(56, 189, 248, 0.8);
+  background: rgba(56, 189, 248, 0.12);
+}
+
+.file-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.file-editor textarea {
+  width: 100%;
+  height: 100%;
+  resize: none;
+  background: rgba(15,23,42,0.8);
+  color: #e2e8f0;
+  border: none;
+  padding: 16px;
+  font-family: "Consolas", "Monaco", monospace;
+  font-size: 14px;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.app-store-list,
+.chat-list,
+.notes-list,
+.games-list {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.store-card,
+.chat-card,
+.notes-card,
+.game-card {
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.04);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.store-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.store-card button,
+.chat-card button,
+.game-card button {
+  padding: 8px 10px;
+}
+
+.chat-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.chat-thread {
+  flex: 1;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+}
+
+.chat-bubble {
+  max-width: 75%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.06);
+  line-height: 1.4;
+}
+
+.chat-bubble.self {
+  align-self: flex-end;
+  background: rgba(56, 189, 248, 0.22);
+}
+
+.chat-compose {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px 14px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.chat-compose input {
+  flex: 1;
+  background: rgba(15,23,42,0.8);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+.code-output {
+  padding: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  min-height: 130px;
+  background: rgba(0,0,0,0.2);
+  white-space: pre-wrap;
+  font-family: Consolas, monospace;
+  color: #d1fae5;
+}
+
+.code-editor-wrap {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.code-editor-wrap textarea {
+  flex: 1;
+  resize: none;
+  padding: 14px;
+  border: none;
+  background: rgba(15,23,42,0.8);
+  color: #e2e8f0;
+  font-family: Consolas, monospace;
+  font-size: 14px;
+}
+
+.code-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.game-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.canvas-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  flex: 1;
+}
+
+canvas {
+  background: linear-gradient(180deg, rgba(15,23,42,1), rgba(17, 24, 39, 1));
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  box-shadow: inset 0 0 24px rgba(56,189,248,0.18);
+}
+
+.game-controls {
+  padding: 0 12px 12px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.notes-editor {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.notes-editor textarea {
+  flex: 1;
+  resize: none;
+  border: none;
+  background: rgba(15,23,42,0.8);
+  color: #e2e8f0;
+  padding: 16px;
+  font-size: 14px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+@media (max-width: 820px) {
+  .file-area {
+    grid-template-columns: 1fr;
+  }
+
+  .file-sidebar {
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+
+  .window {
+    min-width: 300px;
+    max-width: calc(100vw - 18px);
+  }
+}

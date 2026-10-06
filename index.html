@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web OS</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="desktop">
+      <div class="topbar">
+        <div class="brand">Web OS</div>
+        <div class="topbar-center">
+          <span id="clock">--:--</span>
+        </div>
+        <div class="user-pill">Guest session</div>
+      </div>
+
+      <div id="desktop-icons" class="desktop-icons"></div>
+
+      <div id="taskbar" class="taskbar">
+        <div class="taskbar-left">
+          <button class="start-btn" id="startBtn">Start</button>
+        </div>
+        <div id="openApps" class="taskbar-apps"></div>
+        <div class="taskbar-right">
+          <span id="statusText">Ready</span>
+        </div>
+      </div>
+
+      <div id="windowLayer" class="window-layer"></div>
+
+      <div id="startMenu" class="start-menu hidden">
+        <div class="start-menu-header">Apps</div>
+        <div id="startMenuList"></div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
