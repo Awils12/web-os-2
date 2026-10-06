@@ -55,7 +55,7 @@ html, body {
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
-button, input, textarea {
+button, input, textarea, select {
   font: inherit;
 }
 
@@ -72,7 +72,7 @@ button:hover {
   background: rgba(255,255,255,0.12);
 }
 
-input, textarea {
+input, textarea, select {
   border: 1px solid rgba(255,255,255,0.12);
   background: rgba(8, 15, 25, 0.8);
   color: var(--text);
@@ -287,12 +287,7 @@ body.neon-mode .glass, body.neon-mode .window, body.neon-mode .start-menu, body.
 .resize-handle.north { top: -4px; }
 .resize-handle.south { bottom: -4px; }
 
-.resize-handle.corner {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-}
-
+.resize-handle.corner { width: 12px; height: 12px; border-radius: 50%; }
 .resize-handle.ne { top: -6px; right: -6px; cursor: ne-resize; }
 .resize-handle.nw { top: -6px; left: -6px; cursor: nw-resize; }
 .resize-handle.se { bottom: -6px; right: -6px; cursor: se-resize; }
@@ -435,7 +430,7 @@ body.neon-mode .glass, body.neon-mode .window, body.neon-mode .start-menu, body.
 
 .file-layout {
   display: grid;
-  grid-template-columns: 220px 1fr;
+  grid-template-columns: 240px 1fr;
   width: 100%;
   height: 100%;
 }
@@ -444,15 +439,18 @@ body.neon-mode .glass, body.neon-mode .window, body.neon-mode .start-menu, body.
   border-right: 1px solid rgba(255,255,255,0.08);
   padding: 12px;
   background: rgba(255,255,255,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.file-list {
+.folder-list {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.file-item {
+.folder-item {
   width: 100%;
   text-align: left;
   padding: 10px 12px;
@@ -460,9 +458,44 @@ body.neon-mode .glass, body.neon-mode .window, body.neon-mode .start-menu, body.
   background: rgba(255,255,255,0.03);
 }
 
-.file-item.active {
+.folder-item.active {
   border-color: rgba(104,213,255,0.8);
   background: rgba(104,213,255,0.12);
+}
+
+.mini-panel {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mini-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.recent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.recent-item {
+  text-align: left;
+  background: rgba(255,255,255,0.02);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.muted-note {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .file-editor {
@@ -471,11 +504,88 @@ body.neon-mode .glass, body.neon-mode .window, body.neon-mode .start-menu, body.
   height: 100%;
 }
 
-.file-editor textarea {
+.file-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  align-items: center;
+}
+
+.file-toolbar input,
+.file-toolbar select {
+  padding: 9px 10px;
+  border-radius: 10px;
+}
+
+.file-toolbar input { flex: 1; }
+
+.file-breadcrumbs {
+  padding: 10px 12px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.file-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 12px;
+  overflow: auto;
   flex: 1;
+}
+
+.file-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 120px;
+  background: rgba(255,255,255,0.03);
+  border-radius: 14px;
+  padding: 12px 10px;
+}
+
+.file-card.favorite {
+  border: 1px solid rgba(255, 214, 102, 0.7);
+}
+
+.file-card.selected {
+  border-color: rgba(104,213,255,0.8);
+  background: rgba(104,213,255,0.12);
+}
+
+.file-icon { font-size: 30px; margin-bottom: 8px; }
+.file-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  max-width: 100%;
+}
+.file-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.empty-state {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  color: var(--muted);
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 12px;
+  min-height: 120px;
+}
+
+#fileEditorArea {
+  flex: 1;
+  min-height: 180px;
   resize: none;
-  border: none;
-  background: rgba(10, 16, 25, 0.92);
+  border: 0;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: rgba(10,16,25,0.9);
+  color: #ebfaff;
   padding: 16px;
   font-family: Consolas, monospace;
   font-size: 14px;
@@ -486,6 +596,7 @@ body.neon-mode .glass, body.neon-mode .window, body.neon-mode .start-menu, body.
   gap: 8px;
   padding: 12px;
   border-top: 1px solid rgba(255,255,255,0.08);
+  flex-wrap: wrap;
 }
 
 .store-list,

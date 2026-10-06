@@ -4,7 +4,11 @@ const STORAGE_KEYS = {
   installedApps: 'webos_v3_installed',
   theme: 'webos_v3_theme',
   accent: 'webos_v3_accent',
-  wallpaper: 'webos_v3_wallpaper'
+  wallpaper: 'webos_v3_wallpaper',
+  recentFiles: 'webos_v3_recent_files',
+  trash: 'webos_v3_trash',
+  sortMode: 'webos_v3_sort_mode',
+  clipboard: 'webos_v3_clipboard'
 };
 
 const APP_CATALOG = [
@@ -18,17 +22,39 @@ const APP_CATALOG = [
   { id: 'terminal', name: 'Terminal', icon: '⌨️', category: 'System', installed: true }
 ];
 
+function normalizeStoredFiles(files) {
+  if (!Array.isArray(files)) return [];
+  return files.map((file) => ({
+    id: file.id || `file-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name: file.name || 'untitled',
+    type: file.type || 'file',
+    parentId: file.parentId || file.folderId || 'root',
+    content: file.content || '',
+    favorite: Boolean(file.favorite),
+    deleted: Boolean(file.deleted),
+    createdAt: file.createdAt || Date.now(),
+    updatedAt: file.updatedAt || Date.now(),
+    size: typeof file.size === 'number' ? file.size : (String(file.content || '').length || 0)
+  }));
+}
+
 const state = {
-  files: loadJSON(STORAGE_KEYS.files, [
-    { id: 'welcome', name: 'welcome.txt', content: 'Welcome home.\n\nThis is your personal web desktop.\nEverything is yours to shape.' },
-    { id: 'ideas', name: 'brainstorm.txt', content: 'Ideas:\n- launch app store\n- build a browser\n- write code\n- make good things' },
-    { id: 'notes', name: 'notes.md', content: '# Home screen\n\nA place to think, create, and roam.' }
-  ]),
+  files: normalizeStoredFiles(loadJSON(STORAGE_KEYS.files, [
+    { id: 'welcome', name: 'welcome.txt', content: 'Welcome home.\n\nThis is your personal web desktop.\nEverything is yours to shape.', type: 'file', parentId: 'root', favorite: true },
+    { id: 'ideas', name: 'brainstorm.txt', content: 'Ideas:\n- launch app store\n- build a browser\n- write code\n- make good things', type: 'file', parentId: 'root', favorite: false },
+    { id: 'notes', name: 'notes.md', content: '# Home screen\n\nA place to think, create, and roam.', type: 'file', parentId: 'root', favorite: false },
+    { id: 'work', name: 'Work', type: 'folder', parentId: 'root', favorite: false, content: '' }
+  ])),
   notes: loadJSON(STORAGE_KEYS.notes, 'Dream big. Build thoughtfully. Make something that feels like home inside a screen.'),
   installedApps: loadJSON(STORAGE_KEYS.installedApps, APP_CATALOG.map((app) => app.id)),
   theme: loadJSON(STORAGE_KEYS.theme, 'dark'),
   accent: loadJSON(STORAGE_KEYS.accent, '#68d5ff'),
-  wallpaper: loadJSON(STORAGE_KEYS.wallpaper, '')
+  wallpaper: loadJSON(STORAGE_KEYS.wallpaper, ''),
+  recentFiles: loadJSON(STORAGE_KEYS.recentFiles, ['welcome']),
+  trash: loadJSON(STORAGE_KEYS.trash, []),
+  sortMode: loadJSON(STORAGE_KEYS.sortMode, 'name'),
+  clipboard: loadJSON(STORAGE_KEYS.clipboard, null),
+  currentFolderId: 'root'
 };
 
 const windows = {};
@@ -45,6 +71,54 @@ function loadJSON(key, fallback) {
 
 function saveJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
+}
+
+function getFileById(id) {
+  return state.files.find((file) => file.id === id) || null;
+}
+
+function getChildren(parentId = state.currentFolderId) {
+  return state.files.filter((file) => !file.deleted && file.parentId === parentId);
+}
+
+function getFolderById(id) {
+  return state.files.find((file) => file.id === id && file.type === 'folder') || null;
+}
+
+function getCurrentFolderName() {
+  const folder = getFolderById(state.currentFolderId);
+  return folder ? folder.name : 'Home';
+}
+
+function addToRecent(fileId) {
+  if (!fileId) return;
+  state.recentFiles = [fileId, ...state.recentFiles.filter((id) => id !== fileId)].slice(0, 8);
+  saveJSON(STORAGE_KEYS.recentFiles, state.recentFiles);
+}
+
+function setCurrentFolder(folderId) {
+  state.currentFolderId = folderId;
+}
+
+function getVisibleFiles() {
+  const files = getChildren(state.currentFolderId);
+  const sortMode = state.sortMode;
+
+  files.sort((a, b) => {
+    if (sortMode === 'date') return (b.updatedAt || 0) - (a.updatedAt || 0);
+    if (sortMode === 'type') return (a.type === b.type ? 0 : a.type === 'folder' ? -1 : 1) || a.name.localeCompare(b.name);
+    return a.name.localeCompare(b.name);
+  });
+
+  return files;
+}
+
+function saveState() {
+  saveJSON(STORAGE_KEYS.files, state.files);
+  saveJSON(STORAGE_KEYS.trash, state.trash);
+  saveJSON(STORAGE_KEYS.recentFiles, state.recentFiles);
+  saveJSON(STORAGE_KEYS.sortMode, state.sortMode);
+  saveJSON(STORAGE_KEYS.clipboard, state.clipboard);
 }
 
 function applyTheme() {
@@ -77,9 +151,7 @@ function showNotification(message, kind = 'info') {
   note.style.borderColor = kind === 'success' ? 'rgba(67, 211, 158, 0.6)' : 'rgba(255,255,255,0.12)';
   tray.appendChild(note);
 
-  setTimeout(() => {
-    note.remove();
-  }, 2600);
+  setTimeout(() => note.remove(), 2600);
 }
 
 function updateClock() {
@@ -383,72 +455,361 @@ function createBrowserWindow() {
 }
 
 function createFilesWindow() {
-  const files = state.files;
-  const activeFile = files[0];
-  const fileList = files.map((file) => `
-    <button class="file-item ${file.id === activeFile.id ? 'active' : ''}" data-file-id="${file.id}">${file.name}</button>
-  `).join('');
+  const folderItems = [
+    { id: 'root', name: 'Home' },
+    ...state.files.filter((file) => file.type === 'folder' && !file.deleted).map((file) => ({ id: file.id, name: file.name }))
+  ];
+
+  const visibleFiles = getVisibleFiles();
+  const currentFolder = getCurrentFolderName();
+  const selected = visibleFiles.find((file) => file.id === state.currentFileId) || visibleFiles[0] || null;
+  const selectedId = selected ? selected.id : null;
 
   const html = `
-    <div class="file-layout">
+    <div class="file-layout file-system">
       <aside class="file-sidebar">
-        <div class="file-list">${fileList}</div>
-        <div class="editor-actions">
-          <button id="newFileBtn">+ New</button>
+        <div class="folder-list">
+          ${folderItems.map((folder) => `
+            <button class="folder-item ${folder.id === state.currentFolderId ? 'active' : ''}" data-folder-id="${folder.id}">${folder.name}</button>
+          `).join('')}
+        </div>
+
+        <div class="mini-panel">
+          <div class="mini-title">Quick actions</div>
+          <button id="newFolderBtn">New folder</button>
+          <button id="newFileBtn">New file</button>
+          <button id="importFileBtn">Import</button>
+          <button id="trashBtn">Recycle bin</button>
+        </div>
+
+        <div class="mini-panel">
+          <div class="mini-title">Recent</div>
+          <div class="recent-list">
+            ${state.recentFiles
+              .map((fileId) => {
+                const file = getFileById(fileId);
+                return file ? `<button class="recent-item" data-file-id="${file.id}">${file.name}</button>` : '';
+              })
+              .join('') || '<span class="muted-note">No recent files</span>'}
+          </div>
         </div>
       </aside>
+
       <section class="file-editor">
-        <textarea id="fileEditorArea">${escapeHtml(activeFile.content)}</textarea>
-        <div class="editor-actions">
-          <button id="saveFileBtn">Save</button>
-          <button id="deleteFileBtn">Delete</button>
+        <div class="file-toolbar">
+          <input id="fileSearch" placeholder="Search files..." />
+          <select id="sortFiles">
+            <option value="name" ${state.sortMode === 'name' ? 'selected' : ''}>Name</option>
+            <option value="date" ${state.sortMode === 'date' ? 'selected' : ''}>Date</option>
+            <option value="type" ${state.sortMode === 'type' ? 'selected' : ''}>Type</option>
+          </select>
         </div>
+
+        <div class="file-breadcrumbs">${currentFolder}</div>
+
+        <div class="file-grid">
+          ${visibleFiles.length ? visibleFiles.map((file) => `
+            <button class="file-card ${file.favorite ? 'favorite' : ''} ${selectedId === file.id ? 'selected' : ''}" data-file-id="${file.id}" data-type="${file.type}">
+              <div class="file-icon">${file.type === 'folder' ? '📁' : '📄'}</div>
+              <div class="file-name">${file.name}</div>
+              <div class="file-meta">${file.type === 'folder' ? 'folder' : getExtension(file.name)}</div>
+            </button>
+          `).join('') : '<div class="empty-state">No items here</div>'}
+        </div>
+
+        <div class="editor-actions">
+          <button id="copyBtn">Copy</button>
+          <button id="cutBtn">Cut</button>
+          <button id="pasteBtn">Paste</button>
+          <button id="favoriteBtn">${selected && selected.favorite ? 'Unfavorite' : 'Favorite'}</button>
+          <button id="renameBtn">Rename</button>
+          <button id="exportBtn">Export</button>
+          <button id="deleteBtn">Delete</button>
+        </div>
+
+        <textarea id="fileEditorArea" placeholder="Select a file to edit...">${selected && selected.type === 'file' ? escapeHtml(selected.content) : ''}</textarea>
       </section>
     </div>
   `;
 
-  const win = createWindow('files', 'Files', html, { left: '220px', top: '120px', width: '760px', height: '540px' });
-  const editor = win.querySelector('#fileEditorArea');
-  let selectedId = activeFile.id;
+  const win = createWindow('files', 'Files', html, { left: '220px', top: '120px', width: '860px', height: '620px' });
 
-  win.querySelectorAll('.file-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const id = item.dataset.fileId;
-      const file = state.files.find((entry) => entry.id === id);
+  const searchInput = win.querySelector('#fileSearch');
+  const sortInput = win.querySelector('#sortFiles');
+  const editor = win.querySelector('#fileEditorArea');
+  const fileGrid = win.querySelector('.file-grid');
+  let currentSelectedId = selectedId;
+  state.currentFileId = currentSelectedId;
+
+  const refreshAndReopen = () => {
+    closeWindow('files');
+    createFilesWindow();
+  };
+
+  const setSelected = (fileId) => {
+    currentSelectedId = fileId;
+    state.currentFileId = fileId;
+    const selectedFile = getFileById(fileId);
+    if (!selectedFile) return;
+    addToRecent(fileId);
+    if (selectedFile.type === 'file') {
+      editor.value = selectedFile.content;
+      editor.disabled = false;
+    } else {
+      editor.value = `Folder: ${selectedFile.name}`;
+      editor.disabled = true;
+    }
+
+    fileGrid.querySelectorAll('.file-card').forEach((card) => {
+      card.classList.toggle('selected', card.dataset.fileId === fileId);
+    });
+  };
+
+  fileGrid.querySelectorAll('.file-card').forEach((card) => {
+    card.addEventListener('click', () => setSelected(card.dataset.fileId));
+    card.addEventListener('dblclick', () => {
+      const file = getFileById(card.dataset.fileId);
       if (!file) return;
-      selectedId = id;
-      editor.value = file.content;
-      win.querySelectorAll('.file-item').forEach((node) => node.classList.toggle('active', node.dataset.fileId === id));
+      if (file.type === 'folder') {
+        state.currentFolderId = file.id;
+        state.currentFileId = null;
+        refreshAndReopen();
+      } else {
+        setSelected(file.id);
+      }
     });
   });
 
-  win.querySelector('#saveFileBtn').addEventListener('click', () => {
-    const target = state.files.find((file) => file.id === selectedId);
-    if (!target) return;
-    target.content = editor.value;
-    saveJSON(STORAGE_KEYS.files, state.files);
-    showNotification('File saved');
+  win.querySelectorAll('.folder-item').forEach((folder) => {
+    folder.addEventListener('click', () => {
+      state.currentFolderId = folder.dataset.folderId;
+      state.currentFileId = null;
+      refreshAndReopen();
+    });
   });
 
-  win.querySelector('#deleteFileBtn').addEventListener('click', () => {
-    if (state.files.length <= 1) return;
-    state.files = state.files.filter((file) => file.id !== selectedId);
-    selectedId = state.files[0].id;
-    saveJSON(STORAGE_KEYS.files, state.files);
-    closeWindow('files');
-    createFilesWindow();
-    showNotification('File deleted');
+  win.querySelectorAll('.recent-item').forEach((item) => {
+    item.addEventListener('click', () => {
+      setSelected(item.dataset.fileId);
+    });
+  });
+
+  searchInput.addEventListener('input', () => {
+    const term = searchInput.value.trim().toLowerCase();
+    const filteredRows = getVisibleFiles().filter((file) => file.name.toLowerCase().includes(term) || (file.content || '').toLowerCase().includes(term));
+    const grid = win.querySelector('.file-grid');
+    grid.innerHTML = filteredRows.length ? filteredRows.map((file) => `
+      <button class="file-card ${file.favorite ? 'favorite' : ''} ${currentSelectedId === file.id ? 'selected' : ''}" data-file-id="${file.id}" data-type="${file.type}">
+        <div class="file-icon">${file.type === 'folder' ? '📁' : '📄'}</div>
+        <div class="file-name">${file.name}</div>
+        <div class="file-meta">${file.type === 'folder' ? 'folder' : getExtension(file.name)}</div>
+      </button>
+    `).join('') : '<div class="empty-state">No matching files</div>';
+
+    grid.querySelectorAll('.file-card').forEach((card) => {
+      card.addEventListener('click', () => setSelected(card.dataset.fileId));
+      card.addEventListener('dblclick', () => {
+        const file = getFileById(card.dataset.fileId);
+        if (file && file.type === 'folder') {
+          state.currentFolderId = file.id;
+          refreshAndReopen();
+        }
+      });
+    });
+  });
+
+  sortInput.addEventListener('change', (event) => {
+    state.sortMode = event.target.value;
+    saveJSON(STORAGE_KEYS.sortMode, state.sortMode);
+    refreshAndReopen();
+  });
+
+  win.querySelector('#newFolderBtn').addEventListener('click', () => {
+    const folderName = prompt('Folder name:', 'New Folder');
+    if (!folderName) return;
+    const folder = {
+      id: `folder-${Date.now()}`,
+      name: folderName.trim(),
+      type: 'folder',
+      parentId: state.currentFolderId,
+      favorite: false,
+      deleted: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      content: ''
+    };
+    state.files.push(folder);
+    saveState();
+    refreshAndReopen();
   });
 
   win.querySelector('#newFileBtn').addEventListener('click', () => {
-    const id = `file-${Date.now()}`;
-    const name = `new-file-${state.files.length + 1}.txt`;
-    state.files.push({ id, name, content: 'Write something new...' });
-    saveJSON(STORAGE_KEYS.files, state.files);
-    closeWindow('files');
-    createFilesWindow();
-    showNotification('New file created');
+    const fileName = prompt('File name:', 'new-file.txt');
+    if (!fileName) return;
+    const entry = {
+      id: `file-${Date.now()}`,
+      name: fileName.trim(),
+      type: 'file',
+      parentId: state.currentFolderId,
+      content: '',
+      favorite: false,
+      deleted: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      size: 0
+    };
+    state.files.push(entry);
+    saveState();
+    refreshAndReopen();
   });
+
+  win.querySelector('#importFileBtn').addEventListener('click', () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.onchange = (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const entry = {
+          id: `import-${Date.now()}`,
+          name: file.name,
+          type: 'file',
+          parentId: state.currentFolderId,
+          content: String(reader.result || ''),
+          favorite: false,
+          deleted: false,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          size: file.size
+        };
+        state.files.push(entry);
+        saveState();
+        refreshAndReopen();
+        showNotification('File imported');
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  });
+
+  win.querySelector('#trashBtn').addEventListener('click', () => {
+    const trashList = state.files.filter((file) => file.deleted);
+    if (!trashList.length) {
+      showNotification('Recycle bin is empty');
+      return;
+    }
+    const names = trashList.map((file) => file.name).join(', ');
+    const restore = confirm(`Restore deleted files?\n${names}`);
+    if (restore) {
+      trashList.forEach((file) => {
+        file.deleted = false;
+      });
+      saveState();
+      refreshAndReopen();
+      showNotification('Items restored');
+    }
+  });
+
+  win.querySelector('#copyBtn').addEventListener('click', () => {
+    if (!currentSelectedId) return;
+    state.clipboard = { id: currentSelectedId, action: 'copy' };
+    saveJSON(STORAGE_KEYS.clipboard, state.clipboard);
+    showNotification('Copied to clipboard');
+  });
+
+  win.querySelector('#cutBtn').addEventListener('click', () => {
+    if (!currentSelectedId) return;
+    state.clipboard = { id: currentSelectedId, action: 'cut' };
+    saveJSON(STORAGE_KEYS.clipboard, state.clipboard);
+    showNotification('Cut selected item');
+  });
+
+  win.querySelector('#pasteBtn').addEventListener('click', () => {
+    const clipboard = state.clipboard;
+    if (!clipboard) return;
+    const file = getFileById(clipboard.id);
+    if (!file) return;
+    const copy = JSON.parse(JSON.stringify(file));
+    copy.id = `${copy.type === 'folder' ? 'folder' : 'file'}-${Date.now()}`;
+    copy.name = `${copy.name}`;
+    copy.parentId = state.currentFolderId;
+    copy.deleted = false;
+    copy.updatedAt = Date.now();
+    state.files.push(copy);
+    if (clipboard.action === 'cut') {
+      const original = getFileById(clipboard.id);
+      if (original) original.parentId = state.currentFolderId;
+    }
+    state.clipboard = null;
+    saveState();
+    refreshAndReopen();
+    showNotification('Pasted successfully');
+  });
+
+  win.querySelector('#favoriteBtn').addEventListener('click', () => {
+    if (!currentSelectedId) return;
+    const file = getFileById(currentSelectedId);
+    if (!file) return;
+    file.favorite = !file.favorite;
+    file.updatedAt = Date.now();
+    saveState();
+    refreshAndReopen();
+  });
+
+  win.querySelector('#renameBtn').addEventListener('click', () => {
+    if (!currentSelectedId) return;
+    const file = getFileById(currentSelectedId);
+    if (!file) return;
+    const nextName = prompt('Rename item:', file.name);
+    if (!nextName || !nextName.trim()) return;
+    file.name = nextName.trim();
+    file.updatedAt = Date.now();
+    saveState();
+    refreshAndReopen();
+  });
+
+  win.querySelector('#exportBtn').addEventListener('click', () => {
+    if (!currentSelectedId) return;
+    const file = getFileById(currentSelectedId);
+    if (!file || file.type !== 'file') return;
+    const blob = new Blob([file.content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    URL.revokeObjectURL(url);
+    showNotification('Exported file');
+  });
+
+  win.querySelector('#deleteBtn').addEventListener('click', () => {
+    if (!currentSelectedId) return;
+    const file = getFileById(currentSelectedId);
+    if (!file) return;
+    file.deleted = true;
+    state.trash.push(file.id);
+    saveState();
+    refreshAndReopen();
+    showNotification('Moved to recycle bin');
+  });
+
+  editor.addEventListener('input', () => {
+    const file = getFileById(currentSelectedId);
+    if (file && file.type === 'file') {
+      file.content = editor.value;
+      file.updatedAt = Date.now();
+      file.size = editor.value.length;
+      saveState();
+    }
+  });
+
+  if (currentSelectedId) setSelected(currentSelectedId);
+}
+
+function getExtension(name) {
+  const dot = name.lastIndexOf('.');
+  return dot > -1 ? name.slice(dot + 1).toUpperCase() : 'FILE';
 }
 
 function createWriterWindow() {
@@ -504,7 +865,7 @@ hello();</textarea>
   });
 
   win.querySelector('#saveCodeBtn').addEventListener('click', () => {
-    const snippet = { id: `snippet-${Date.now()}`, name: 'snippet.js', content: editor.value };
+    const snippet = { id: `snippet-${Date.now()}`, name: 'snippet.js', type: 'file', parentId: 'root', content: editor.value, favorite: false, deleted: false, createdAt: Date.now(), updatedAt: Date.now(), size: editor.value.length };
     state.files.push(snippet);
     saveJSON(STORAGE_KEYS.files, state.files);
     output.textContent = 'Saved to Files as snippet.js';
@@ -758,7 +1119,7 @@ function escapeHtml(text) {
 function setupContextMenu() {
   const menu = document.getElementById('desktopContextMenu');
   const items = [
-    { label: 'New Folder', action: () => { showNotification('Folder creation coming next'); } },
+    { label: 'New Folder', action: () => { showNotification('Folder creation is inside Files app'); } },
     { label: 'Change Wallpaper', action: () => openApp('settings') },
     { label: 'Toggle Theme', action: () => {
         state.theme = state.theme === 'dark' ? 'light' : state.theme === 'light' ? 'neon' : 'dark';
